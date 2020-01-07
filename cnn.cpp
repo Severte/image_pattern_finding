@@ -1,12 +1,18 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <ctime>
 using namespace std;
 
 #define IMG_WIDTH 60
 #define IMG_HEIGHT 60
 #define FILTER_SIZE 9
-#define FILTER_COUNT 12;
+#define FILTER_SIZE_SQ 81
+#define FEATURE_MAP_SIZE 52
+#define FEATURE_MAP_SIZE_SQ 2704
+#define NEW_SIZE 26
+#define NEW_SIZE_SQ 676
+#define FILTER_COUNT 12
 
 
 float maxValue(float** filtersArray, int x, int y){
@@ -84,10 +90,101 @@ float outputLayer(float* input, float* weights){
 void loadFilters(float** filters){
     ifstream inFile;
     for(int i = 0; i < FILTER_COUNT; i++){
-        inFile.open("filter" + to_string(i+1));
-
+        inFile.open("filter" + to_string(i+1) + ".txt");
+        int j = 0;
+        float v = 0.0;
+        while( inFile >> v){
+            filters[i][j] = v;
+            j++;
+        }
+        inFile.close();
     }
 }
 
+void loadWeights(float* weights, int n){
+    ifstream inFile;
+    
+    inFile.open("weights" + to_string(n+1) + ".txt");
+    int j = 0;
+    float v = 0.0;
+    while( inFile >> v ){
+        weights[j] = v;
+        j++;
+    }
+    inFile.close();
+}
+
+bool fileExists(string filename){
+    ifstream inFile(filename);
+    return inFile;
+}
+
+float random(float min, float max){
+    srand(time(0));
+    float random = ((float) rand()) / (float) RAND_MAX;
+    float diff = max - min;
+    float r = random * diff;
+    return min + r;
+}
+
+void saveWeights(float* weights, string filename){
+    ofstream outFile(filename);
+    for(int i = 0; i < NEW_SIZE; i++){
+        for(int j = 0; j < NEW_SIZE; j++){
+            outFile << weights[i * NEW_SIZE + j] << " ";
+        }
+        outFile << "\n";
+    }
+    outFile.close();
+}
+
+void saveFilters(float** filters){
+    for(int i = 0; i < FILTER_COUNT; i++){
+        ofstream outFile("filter" + to_string(i+1) + ".txt");
+            for (int j = 0; j < FILTER_SIZE_SQ; j++){
+                outFile << filters[i][j] << " ";
+            }
+            outFile.close();
+        }
+}
+
+void initializeValues(float** filters, float* weights_hidden, float* weights_output){
+    for(int i = 0; i < FILTER_COUNT; i++){
+            for (int j = 0; j < FILTER_SIZE_SQ; j++){
+                filters[i][j] = random(-1.0,1.0);
+            }
+        }
+        for (int k = 0; k < NEW_SIZE_SQ; k++){
+                weights_hidden_layer[k] = random(-1.0,1.0);
+                weights_output_layer[k] = random(-1.0,1.0);
+            }
+}
+
+float performCNN(float* img, float** filters, float* weights_h, float* weights_o){
+    float feature_maps[FILTER_COUNT][FEATURE_MAP_SIZE_SQ];
+    for(i = 0; i < FILTER_COUNT; i++){
+        applyFilter(img, filters[i], i%3, feature_maps[i]);
+    }
+    float filter_pooled[FEATURE_MAP_SIZE_SQ];
+    filtersPooling(feature_maps, filter_pooled);
+    float final_pooled[NEW_SIZE_SQ];
+    pooling(filter_pooled,final_pooled);
+    float hidden_layer_output[NEW_SIZE_SQ];
+    hiddenLayer(final_pooled, weights_h, hidden_layer_output);
+    return outputLayer(hidden_layer_output, weights_o);
+}
+
 void main(){
+    float filters[FILTER_COUNT][FILTER_SIZE_SQ];
+    float weights_hidden_layer[NEW_SIZE_SQ];
+    float weights_output_layer[NEW_SIZE_SQ];
+    if(!fileExists("filter1.txt")){
+        initializeValues(filters, weights_hidden_layer, weights_output_layer);
+    }
+    else{
+        loadFilters(filters);
+        loadWeights(weights_hidden_layer, 1);
+        loadWeights(weights_output_layer, 2);
+    }
+    
 }
